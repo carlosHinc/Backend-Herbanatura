@@ -77,8 +77,8 @@ class Product {
       ) {
         const batchQuery = `
           INSERT INTO product_batches 
-          (id_product, batch_number, expiration_date, stock, purchase_price, entry_date)
-          VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
+          (id_product, batch_name, expiration_date, stock, unit_purchase_price, total_purchase_price, entry_date)
+          VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE)
           RETURNING id
         `;
 
@@ -87,7 +87,8 @@ class Product {
           productData.batchNumber,
           productData.expirationDate,
           productData.stock,
-          productData.purchasePrice || null,
+          productData.unitPurchasePrice || null,
+          productData.totalPurchasePrice || null,
         ]);
       }
 

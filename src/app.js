@@ -4,6 +4,7 @@ const cors = require("cors");
 
 // Importar rutas
 const productsRoutes = require("./routes/products");
+const laboratoriesRoutes = require("./routes/laboratories");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,7 @@ app.get("/health", (req, res) => {
 
 // Rutas de la API
 app.use("/api/products", productsRoutes);
+app.use("/api/laboratories", laboratoriesRoutes);
 
 // Ruta para 404
 app.use((req, res) => {

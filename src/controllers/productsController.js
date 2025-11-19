@@ -60,7 +60,7 @@ const productsController = {
         batchNumber,
         expirationDate,
         stock,
-        purchasePrice,
+        unitPurchasePrice,
       } = req.body;
 
       // Validaciones básicas
@@ -114,7 +114,8 @@ const productsController = {
       }
 
       // Validaciones para el lote (opcional)
-      if (batchNumber || expirationDate || stock || purchasePrice) {
+      let totalPurchasePrice = null;
+      if (batchNumber || expirationDate || stock || unitPurchasePrice) {
         if (!batchNumber || !batchNumber.trim()) {
           return res.status(400).json({
             success: false,
@@ -150,12 +151,17 @@ const productsController = {
           });
         }
 
-        if (purchasePrice && purchasePrice < 0) {
+        if (unitPurchasePrice && unitPurchasePrice < 0) {
           return res.status(400).json({
             success: false,
-            message: "El precio de compra no puede ser negativo",
+            message: "El precio de compra unitario no puede ser negativo",
           });
         }
+
+        // Calcular el precio total de compra
+        const unitPrice = parseInt(unitPurchasePrice) || 0;
+        const quantity = parseInt(stock) || 0;
+        totalPurchasePrice = unitPrice * quantity;
       }
 
       // Preparar datos del producto
@@ -166,7 +172,10 @@ const productsController = {
         batchNumber: batchNumber?.trim() || null,
         expirationDate: expirationDate || null,
         stock: stock ? parseInt(stock) : 0,
-        purchasePrice: purchasePrice ? parseInt(purchasePrice) : null,
+        unitPurchasePrice: unitPurchasePrice
+          ? parseInt(unitPurchasePrice)
+          : null,
+        totalPurchasePrice: totalPurchasePrice,
       };
 
       // Crear el producto
