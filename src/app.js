@@ -1,3 +1,4 @@
+// Backend/src/app.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -5,6 +6,7 @@ const cors = require("cors");
 // Importar rutas
 const productsRoutes = require("./routes/products");
 const laboratoriesRoutes = require("./routes/laboratories");
+const ordersRoutes = require("./routes/orders"); // ← AGREGAR ESTA LÍNEA
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +32,7 @@ app.get("/health", (req, res) => {
 // Rutas de la API
 app.use("/api/products", productsRoutes);
 app.use("/api/laboratories", laboratoriesRoutes);
+app.use("/api/orders", ordersRoutes); // ← AGREGAR ESTA LÍNEA
 
 // Ruta para 404
 app.use((req, res) => {
