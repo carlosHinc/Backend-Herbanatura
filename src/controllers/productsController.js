@@ -22,6 +22,29 @@ const productsController = {
     }
   },
 
+  /**
+   * GET /api/products/for-sale - Obtener productos disponibles para venta
+   */
+  async getProductsForSale(req, res) {
+    try {
+      const products = await Product.getProductsForSale();
+
+      res.status(200).json({
+        success: true,
+        message: "Productos disponibles para venta obtenidos exitosamente",
+        data: products,
+        count: products.length,
+      });
+    } catch (error) {
+      console.error("Error al obtener productos para venta:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener los productos disponibles para venta",
+        error: error.message,
+      });
+    }
+  },
+
   // Obtener producto por ID
   async getById(req, res) {
     try {
@@ -57,6 +80,7 @@ const productsController = {
         name,
         idLaboratory,
         description,
+        salesPrice,
         batchNumber,
         expirationDate,
         stock,
@@ -93,6 +117,22 @@ const productsController = {
           success: false,
           message: "El nombre del producto no puede exceder 255 caracteres",
         });
+      }
+
+      // Validar salesPrice si se proporciona
+      if (
+        salesPrice !== undefined &&
+        salesPrice !== null &&
+        salesPrice !== ""
+      ) {
+        const salePriceNum = parseInt(salesPrice);
+        if (isNaN(salePriceNum) || salePriceNum < 0) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "El precio de venta debe ser un número válido mayor o igual a 0",
+          });
+        }
       }
 
       // Verificar si el laboratorio existe
@@ -169,6 +209,7 @@ const productsController = {
         name: name.trim(),
         idLaboratory: labId,
         description: description?.trim() || null,
+        salesPrice: salesPrice ? parseInt(salesPrice) : null,
         batchNumber: batchNumber?.trim() || null,
         expirationDate: expirationDate || null,
         stock: stock ? parseInt(stock) : 0,

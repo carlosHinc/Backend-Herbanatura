@@ -8,11 +8,12 @@ class Product {
         p.id,
         p.name AS name,
         l.name AS laboratory,
+        p.sales_price,
         COALESCE(SUM(pb.stock), 0) AS stock
       FROM products p
       LEFT JOIN laboratories l ON p.id_laboratory = l.id
       LEFT JOIN product_batches pb ON p.id = pb.id_product
-      GROUP BY p.id, p.name, l.name
+      GROUP BY p.id, p.name, l.name, p.sales_price
       ORDER BY p.name ASC
     `;
 
@@ -24,6 +25,36 @@ class Product {
     }
   }
 
+  /**
+   * Obtener productos disponibles para venta con su stock total
+   * Solo incluye productos que tengan stock disponible
+   */
+  async getProductsForSale() {
+    const query = `
+    SELECT 
+      p.id,
+      p.name,
+      l.name AS laboratory,
+      COALESCE(SUM(pb.stock), 0) AS stock,
+      p.sales_price
+    FROM products p
+    LEFT JOIN laboratories l ON p.id_laboratory = l.id
+    LEFT JOIN product_batches pb ON p.id = pb.id_product
+    GROUP BY p.id, p.name, l.name, p.sales_price
+    HAVING COALESCE(SUM(pb.stock), 0) > 0
+    ORDER BY p.name ASC
+  `;
+
+    try {
+      const result = await pool.query(query);
+      return result.rows;
+    } catch (error) {
+      throw new Error(
+        `Error al obtener productos para venta: ${error.message}`
+      );
+    }
+  }
+
   // Obtener producto por ID
   async getById(id) {
     const query = `
@@ -31,12 +62,13 @@ class Product {
         p.id,
         p.name AS name,
         l.name AS laboratory,
+        p.sales_price,
         COALESCE(SUM(pb.stock), 0) AS stock
       FROM products p
       LEFT JOIN laboratories l ON p.id_laboratory = l.id
       LEFT JOIN product_batches pb ON p.id = pb.id_product
       WHERE p.id = $1
-      GROUP BY p.id, p.name, l.name
+      GROUP BY p.id, p.name, l.name, p.sales_price
     `;
 
     try {
@@ -56,15 +88,16 @@ class Product {
 
       // 1. Crear el producto
       const productQuery = `
-        INSERT INTO products (id_laboratory, name, description)
-        VALUES ($1, $2, $3)
-        RETURNING id, name, created_at
+        INSERT INTO products (id_laboratory, name, description, sales_price)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, sales_price, created_at
       `;
 
       const productResult = await client.query(productQuery, [
         productData.idLaboratory,
         productData.name,
         productData.description || null,
+        productData.salesPrice || null,
       ]);
 
       const newProduct = productResult.rows[0];
@@ -105,6 +138,7 @@ class Product {
         name: newProduct.name,
         laboratory: laboratoryName,
         stock: productData.stock || 0,
+        salesPrice: newProduct.sales_price,
         createdAt: newProduct.created_at,
       };
     } catch (error) {

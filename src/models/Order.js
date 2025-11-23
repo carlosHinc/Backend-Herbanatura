@@ -1,4 +1,3 @@
-// Backend/src/models/Order.js
 const pool = require("../config/database");
 
 class Order {
@@ -23,9 +22,9 @@ class Order {
       // 1. Validar que todos los productos existan
       const productIds = batches.map((b) => b.idProduct);
       const productCheckQuery = `
-        SELECT id FROM products 
-        WHERE id = ANY($1::int[])
-      `;
+      SELECT id FROM products 
+      WHERE id = ANY($1::int[])
+    `;
       const productCheckResult = await client.query(productCheckQuery, [
         productIds,
       ]);
@@ -57,10 +56,10 @@ class Order {
 
       // 3. Registrar la factura (bill) del pedido
       const billQuery = `
-        INSERT INTO bills (type, value)
-        VALUES ($1, $2)
-        RETURNING id, type, value, created_at
-      `;
+      INSERT INTO bills (type, value)
+      VALUES ($1, $2)
+      RETURNING id, type, value, created_at
+    `;
 
       const billResult = await client.query(billQuery, [
         "Pedido productos",
@@ -69,16 +68,35 @@ class Order {
 
       const bill = billResult.rows[0];
 
-      // 4. Insertar todos los lotes en product_batches
+      // 4. Insertar detalles en bill_details y lotes en product_batches
+      const insertedBillDetails = [];
       const insertedBatches = [];
 
       for (const batch of batchesToInsert) {
+        // 4.1 Insertar en bill_details
+        const billDetailQuery = `
+        INSERT INTO bill_details (id_bill, id_product, unit_price, amount, total_price)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, id_bill, id_product, unit_price, amount, total_price
+      `;
+
+        const billDetailResult = await client.query(billDetailQuery, [
+          bill.id,
+          batch.idProduct,
+          batch.unitPurchasePrice,
+          batch.stock,
+          batch.totalPurchasePrice,
+        ]);
+
+        insertedBillDetails.push(billDetailResult.rows[0]);
+
+        // 4.2 Insertar en product_batches
         const batchQuery = `
-          INSERT INTO product_batches 
-          (id_product, batch_name, expiration_date, stock, unit_purchase_price, total_purchase_price, entry_date)
-          VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE)
-          RETURNING id, id_product, batch_name, expiration_date, stock, unit_purchase_price, total_purchase_price, entry_date
-        `;
+        INSERT INTO product_batches 
+        (id_product, batch_name, expiration_date, stock, unit_purchase_price, total_purchase_price, entry_date)
+        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE)
+        RETURNING id, id_product, batch_name, expiration_date, stock, unit_purchase_price, total_purchase_price, entry_date
+      `;
 
         const batchResult = await client.query(batchQuery, [
           batch.idProduct,
@@ -102,6 +120,7 @@ class Order {
           value: bill.value,
           createdAt: bill.created_at,
         },
+        billDetails: insertedBillDetails,
         batches: insertedBatches,
         summary: {
           totalBatches: insertedBatches.length,
@@ -169,30 +188,28 @@ class Order {
 
       const bill = billResult.rows[0];
 
-      // 2. Obtener los lotes asociados al pedido (por fecha de creación cercana)
+      // 2. Obtener los detalles de la compra de productos
       // Nota: Para una relación más precisa, considera agregar un campo bill_id en product_batches
       const batchesQuery = `
         SELECT 
-          pb.id,
-          pb.id_product,
+          bd.id,
           p.name AS product_name,
-          pb.batch_name,
-          pb.expiration_date,
-          pb.stock,
-          pb.unit_purchase_price,
-          pb.total_purchase_price,
-          pb.entry_date
-        FROM product_batches pb
-        JOIN products p ON pb.id_product = p.id
-        WHERE DATE(pb.entry_date) = DATE($1)
-        ORDER BY pb.id ASC
+          lb.name AS laboratory,
+          bd.unit_price,
+          bd.amount,
+          bd.total_price
+        FROM bill_details bd
+        JOIN products p ON bd.id_product = p.id
+        JOIN laboratories lb ON p.id_laboratory = lb.id
+        
+        WHERE bd.id_bill = $1
       `;
 
-      const batchesResult = await client.query(batchesQuery, [bill.created_at]);
+      const batchesResult = await client.query(batchesQuery, [billId]);
 
       return {
         bill: bill,
-        batches: batchesResult.rows,
+        details: batchesResult.rows,
       };
     } catch (error) {
       throw new Error(`Error al obtener el pedido: ${error.message}`);

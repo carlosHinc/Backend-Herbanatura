@@ -6,7 +6,8 @@ const cors = require("cors");
 // Importar rutas
 const productsRoutes = require("./routes/products");
 const laboratoriesRoutes = require("./routes/laboratories");
-const ordersRoutes = require("./routes/orders"); // ← AGREGAR ESTA LÍNEA
+const ordersRoutes = require("./routes/orders");
+const salesRoutes = require("./routes/sales");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,7 +33,8 @@ app.get("/health", (req, res) => {
 // Rutas de la API
 app.use("/api/products", productsRoutes);
 app.use("/api/laboratories", laboratoriesRoutes);
-app.use("/api/orders", ordersRoutes); // ← AGREGAR ESTA LÍNEA
+app.use("/api/orders", ordersRoutes);
+app.use("/api/sales", salesRoutes);
 
 // Ruta para 404
 app.use((req, res) => {
