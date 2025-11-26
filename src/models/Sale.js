@@ -16,6 +16,8 @@ class Sale {
   async createSale(saleData) {
     const client = await pool.connect();
 
+    console.log("data", saleData);
+
     try {
       await client.query("BEGIN");
 
@@ -32,9 +34,9 @@ class Sale {
 
         productsToSell.push({
           idProduct: product.idProduct,
-          unitValue: unitPrice,
+          unitPrice: unitPrice,
           stock: quantity,
-          unitTotal: totalPrice,
+          totalPrice: totalPrice,
         });
       }
 
@@ -225,12 +227,14 @@ class Sale {
           sd.id_sale,
           sd.id_product,
           p.name AS product_name,
-          sd.unit_value,
+          lb.name as laboratory,
+          sd.unit_price,
           sd.stock,
-          sd.unit_total,
-          sd.created_at
+          sd.total_price,
+          sd.created_at as createdAt
         FROM sale_details sd
         JOIN products p ON sd.id_product = p.id
+        JOIN laboratories lb ON p.id_laboratory = lb.id
         WHERE sd.id_sale = $1
         ORDER BY sd.id ASC
       `;
