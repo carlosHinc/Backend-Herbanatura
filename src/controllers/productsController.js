@@ -45,6 +45,42 @@ const productsController = {
     }
   },
 
+  /**
+   * GET /api/products/expiring?days=30 - Obtener productos próximos a vencer
+   */
+  async getExpiringProducts(req, res) {
+    try {
+      const { days } = req.query;
+
+      // Validar que days sea un número válido
+      if (!days || isNaN(days) || parseInt(days) < 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'El parámetro "days" debe ser un número mayor a 0',
+        });
+      }
+
+      const daysNumber = parseInt(days);
+
+      const expiringProducts = await Product.getExpiringProducts(daysNumber);
+
+      res.status(200).json({
+        success: true,
+        message: `Productos que vencen en los próximos ${daysNumber} días`,
+        data: expiringProducts,
+        count: expiringProducts.length,
+        daysFilter: daysNumber,
+      });
+    } catch (error) {
+      console.error("Error al obtener productos próximos a vencer:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener los productos próximos a vencer",
+        error: error.message,
+      });
+    }
+  },
+
   // Obtener producto por ID
   async getById(req, res) {
     try {

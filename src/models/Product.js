@@ -178,6 +178,79 @@ class Product {
       throw new Error(`Error al verificar laboratorio: ${error.message}`);
     }
   }
+
+  /**
+   * Obtener productos próximos a vencer
+   * @param {number} days - Número de días para considerar productos próximos a vencer
+   * @returns {Array} - Lista de productos próximos a vencer agrupados
+   */
+  async getExpiringProducts(days) {
+    const query = `
+    SELECT 
+      p.id AS product_id,
+      p.name AS product_name,
+      l.name AS laboratory,
+      pb.id AS batch_id,
+      pb.batch_name,
+      pb.expiration_date,
+      pb.stock,
+      pb.entry_date,
+      (pb.expiration_date - CURRENT_DATE) AS days_to_expire
+    FROM product_batches pb
+    JOIN products p ON pb.id_product = p.id
+    JOIN laboratories l ON p.id_laboratory = l.id
+    WHERE pb.stock > 0
+      AND pb.expiration_date < CURRENT_DATE + ($1 || ' days')::INTERVAL
+      AND pb.expiration_date >= CURRENT_DATE
+    ORDER BY pb.expiration_date ASC, p.name ASC
+  `;
+
+    try {
+      const result = await pool.query(query, [days]);
+
+      // Agrupar por producto
+      const groupedProducts = {};
+
+      result.rows.forEach((row) => {
+        const productId = row.product_id;
+
+        if (!groupedProducts[productId]) {
+          groupedProducts[productId] = {
+            productId: row.product_id,
+            productName: row.product_name,
+            laboratory: row.laboratory,
+            totalStock: 0,
+            batches: [],
+          };
+        }
+
+        groupedProducts[productId].totalStock += row.stock;
+        groupedProducts[productId].batches.push({
+          batchId: row.batch_id,
+          batchName: row.batch_name,
+          expirationDate: row.expiration_date,
+          stock: row.stock,
+          entryDate: row.entry_date,
+          daysToExpire: parseInt(row.days_to_expire),
+        });
+      });
+
+      // Convertir objeto a array y ordenar por fecha de vencimiento más próxima
+      return Object.values(groupedProducts).sort((a, b) => {
+        const minExpirationA = Math.min(
+          ...a.batches.map((batch) => batch.daysToExpire)
+        );
+        const minExpirationB = Math.min(
+          ...b.batches.map((batch) => batch.daysToExpire)
+        );
+        return minExpirationA - minExpirationB;
+      });
+    } catch (error) {
+      throw new Error(
+        `Error al obtener productos próximos a vencer: ${error.message}`
+      );
+    }
+  }
 }
 
 module.exports = new Product();
