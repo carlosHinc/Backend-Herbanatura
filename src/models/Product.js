@@ -61,6 +61,7 @@ class Product {
       SELECT 
         p.id,
         p.name AS name,
+        p.id_laboratory,
         l.name AS laboratory,
         p.sales_price,
         COALESCE(SUM(pb.stock), 0) AS stock
@@ -189,6 +190,7 @@ class Product {
     SELECT 
       p.id AS product_id,
       p.name AS product_name,
+      p.sales_price,
       l.name AS laboratory,
       pb.id AS batch_id,
       pb.batch_name,
@@ -219,6 +221,7 @@ class Product {
             productId: row.product_id,
             productName: row.product_name,
             laboratory: row.laboratory,
+            salesPrice: row.sales_price,
             totalStock: 0,
             batches: [],
           };
