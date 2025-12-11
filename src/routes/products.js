@@ -17,4 +17,7 @@ router.get("/:id", productsController.getById);
 // POST /api/products - Crear un nuevo producto
 router.post("/", productsController.create);
 
+// PUT /api/products/:id - Actualizar un producto
+router.put("/:id", productsController.update);
+
 module.exports = router;
